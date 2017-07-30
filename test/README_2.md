@@ -218,6 +218,8 @@ Tests 4 < 5 are written using the GoodTests ( <https://github.com/kata198/GoodTe
 
 Tests using the [ GoodTests ] ( https://github.com/kata198/GoodTests ) framework are really cool.
 
+Search engines like [ DuckDuckGo](		https://www.duckduckgo.com "Quack Quack") promise to not track you.
+
 The tests can be found in the "tests" directory of the project root.
 
 Use runTests.py in that directory to download GoodTests (if not already available/installed) and run the test suite against the local instance of subprocess2.
