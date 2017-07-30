@@ -1,0 +1,7 @@
+recursive-include md_to_rst *.py
+include mdToRst
+include README.md
+include README.rst
+include setup.py
+include LICENSE
+include MANIFEST.in
