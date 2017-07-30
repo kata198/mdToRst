@@ -1,0 +1,124 @@
+#!/usr/bin/env python
+# vim: set ts=4 sw=4 st=4 expandtab 
+'''
+    mdToRst - Convert markdown (md) to restructed text (rst)
+
+    Copyright (c) 2017 Timothy Savannah, All Rights Reserved
+
+    Licensed under terms of the GNU General Public License (GPL) Version 3.0
+
+    You should have recieved a copy of this license as "LICENSE" with the source distribution,
+      otherwise the current license can be found at https://github.com/kata198/mdToRst/blob/master/LICENSE
+
+
+    mdToRst - Main executable to perform the actions provided by the md_to_rst module
+'''
+
+import errno
+import os
+import sys
+import traceback
+
+import md_to_rst
+
+
+__author__ = 'Tim Savannah'
+__version__ = '1.0.0'
+
+__version_tuple__ = ( 1, 0, 0 )
+
+def printUsage():
+    sys.stderr.write('''Usage: mdToRst [filename]
+  Converts a provided markdown file (.md) to restructed text (.rst)
+
+If "filename" is provided as "--", the markdown will be read from stdin.
+
+Example Usage:
+
+  mdToRst README.md | tee README.rst  # Read in README.md, convert to rst, 
+                                      #  and output both to stdout and "README.rst"
+
+
+  cat README.md | mdToRst             # Pipe in the contents of "README.md", and
+                                      #  output the converted document to stdout
+
+''')
+
+
+def readDocumentFromStdin():
+    '''
+        readDocumentFromStdin - Reads and returns all data from stdin.
+            
+            Goes until stdin is closed or EOF is hit.
+
+          @return <str> - The data read from stdin
+    '''
+    data = []
+
+    while not sys.stdin.closed:
+        try:
+            nextChunk = sys.stdin.read()
+        except:
+            break
+        if nextChunk in (b'', ''):
+            break
+        data.append(nextChunk)
+
+    return ''.join(data)
+
+
+if __name__ == '__main__':
+    
+    args = sys.argv[1:]
+    numArgs = len(args)
+
+    if '--help' in args or '-h' in args:
+        printUsage()
+        sys.exit(1)
+
+    if numArgs < 1:
+        sys.stderr.write('Too few arguments.\n\n')
+        printUsage()
+        sys.exit(errno.EINVAL)
+    elif numArgs > 1:
+        sys.stderr.write('Too many arguments.\n\n')
+        printUsage()
+        sys.exit(errno.EINVAL)
+        
+
+    fname = args[0]
+
+    if fname == '--':
+        markdownContents = readDocumentFromStdin()
+    else:
+        if not os.path.exists(fname) or not os.access(fname, os.R_OK):
+            sys.stderr.write('Error: "%s" either does not exist or you do not have read access.\n' %(fname, ))
+            sys.exit(errno.ENOENT)
+        try:
+            with open(fname, 'rt') as f:
+                markdownContents = f.read()
+        except Exception as e:
+            sys.stderr.write('Error: Failed to read from "%s".  %s:  %s\n' %(
+                    fname,
+                    type(e).__name__,
+                    str(e)
+                )
+            )
+            sys.exit(errno.EIO)
+
+    try:
+        rstContents = md_to_rst.convertMarkdownToRst(markdownContents)
+    except Exception as e:
+        excInfo = sys.exc_info()
+        sys.stderr.write('Error: Unable to convert markdown to rst.  %s:  %s\n' %(
+                type(e).__name__,
+                str(e)
+            )
+        )
+        traceback.print_exception( *excInfo )
+        sys.exit(1) # Bah, generic error.
+
+
+    print ( rstContents )
+
+# vim: set ts=4 sw=4 st=4 expandtab 
