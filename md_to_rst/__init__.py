@@ -215,6 +215,7 @@ class ConvertLineData(object):
                 @return <str> - The converted line
         '''
         line = cls._convertPointedBrackets(line)
+        line = cls._convertLabeledExternalHyperlink(line)
 
         return line
 
@@ -318,6 +319,26 @@ class ConvertLineData(object):
         )
 
 
+    LABELED_EXTERNAL_HYPERLINK_RE = re.compile("""[\[](?P<label>(([\\][\]])|[^\]])+)[\]][ \t]*[\(](?P<url>[^\)]+)""")
+
+    @classmethod
+    def _convertLabeledExternalHyperlink(cls, line):
+        '''
+            _convertLabeledExternalHyperlink - Convert an external hyperlink with a label from MD to RST form
+
+                    Example: [Cool Search Site](https://www.duckduckgo.com)
+
+                @param line <str> - The line
+
+                @return <str> - The line with external hyperlinks with labels converted
+        '''
+        return ConvertLineData._replaceSection(line, '[', ')', 
+                    cls.LABELED_EXTERNAL_HYPERLINK_RE,
+                    lambda groupDict : "`%s <%s>`_" %(groupDict['label'].strip(), groupDict['url'].strip())
+        )
+
+
+
     # oops... accidently did the labeled external hyperlinks from RST instead of frm markdown..
     #      I'll save this, commented-out, for in the future if we do RST -> MD
 #    RST_LABELED_EXTERNAL_HYPERLINK_RE = re.compile("""[`](?P<label>(([\\][<])|[^<])+)[ \t]*[<](?P<url>[^(>`_)]+)([>][`][_])""")
@@ -325,7 +346,7 @@ class ConvertLineData(object):
 #    @classmethod
 #    def _convertLabeledExternalHyperlinkRST(cls, line):
 #        '''
-#            _convertLabeledExternalHyperlink - Convert an external hyperlink with a label from MD form to RST form
+#            _convertLabeledExternalHyperlinkRST - Convert an external hyperlink with a label from RST to MD form
 #
 #                    Example: `Python <http://www.python.org/>`_
 #
@@ -334,7 +355,7 @@ class ConvertLineData(object):
 #                @return <str> - The line with external hyperlinks with labels converted
 #        '''
 #        return ConvertLineData._replaceSection(line, "`", ">`_",
-#                    cls.LABELED_EXTERNAL_HYPERLINK_RE,
+#                    cls.RST_LABELED_EXTERNAL_HYPERLINK_RE,
 #                    lambda groupDict : "[%s](%s)" %( groupDict['label'].strip(), groupDict['url'])
 #        )
 
