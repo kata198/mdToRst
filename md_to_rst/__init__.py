@@ -15,7 +15,7 @@
 
 import re
 
-__all__ = ('convertMarkdownToRst', )
+__all__ = ('convertMarkdownToRst', 'ConvertLines', 'ConvertLineData' )
 
 __version__ = '0.1.0'
 __version_tuple__ = (0, 1, 0)
@@ -33,7 +33,9 @@ def convertMarkdownToRst(contents):
     for i in range(numLines):
         line = lines[i]
 
-        convertedLines = ConvertLines.getConvertedLines(line, lines, i)
+        newLine = ConvertLineData.doConvertLineData(line, lines, i)
+
+        convertedLines = ConvertLines.doConvertLine(newLine, lines, i)
 
         newLines += convertedLines
 
@@ -46,14 +48,14 @@ class ConvertLines(object):
 
           Public Methods:
 
-            getConvertedLines - @see ConvertLines.getConvertedLines
+            doConvertLine - @see ConvertLines.doConvertLine
 
     '''
 
     @classmethod
-    def getConvertedLines(cls, line, lines, curIdx):
+    def doConvertLine(cls, line, lines, curIdx):
         '''
-            getConvertedLines - Take a line of markdown, and return the converted RST lines
+            doConvertLine - Take a line of markdown, and return the converted RST lines
 
                 @param line <str> - A line from the markdown file
 
@@ -188,6 +190,90 @@ class ConvertLines(object):
             _addLineBreak - Adds a line break before "line"
         '''
         return ['', line]
+
+
+class ConvertLineData(object):
+    '''
+        Encapsulated class of methods related to converting line data from MD to RST, where they are incompatible.
+
+          This differs from #ConvertLines in the sense that ConvertLines returns zero or more lines of equivilant (mostly used for spacing/formatting), whereas this
+            converts the actuald data where the two specs don't line up (like with links)
+    '''
+
+    @classmethod
+    def doConvertLineData(cls, line, lines, curIdx):
+        '''
+            doConvertLineData - Take a line of markdown, and convert the data itself to RST where they are not compatible
+
+                @param line <str> - A line from the markdown file
+
+                @param lines list<str> - The list of all lines in the markdown file
+
+                @param curIdx <int> - The index of "line" in "lines"
+
+
+                @return <str> - The converted line
+        '''
+        line = cls._convertPointedBrackets(line)
+
+        return line
+
+    POINTED_BRACKET_URL_RE = re.compile('[<](?P<url>(http|https|ftp|smb|file)[:][/][/][^>]+)[>]')
+
+    @classmethod
+    def _convertPointedBrackets(cls, line):
+        if '<' not in line:
+            return line
+
+        lastIdx = 0
+        remainingLine = line[:]
+        ret = []
+
+        keepGoing = True
+
+        while keepGoing is True:
+            # Check if '<' is still present
+            while '<' in remainingLine[:]:
+                nextIdx = remainingLine.index('<')
+                ret.append( remainingLine[ : nextIdx] )
+
+                remainder2 = remainingLine[ nextIdx : ]
+
+                urlMatch = cls.POINTED_BRACKET_URL_RE.match( remainder2 )
+                if not urlMatch:
+                    # Not a url, just a < sign
+
+                    # Check if we have another < sign, and if not, grab the rest of string.
+                    #   otherwise, grab up to the next < and reiterate
+                    nextNextIdx = None
+                    try:
+                        nextNextIdx = remainder2[1:].index('<')
+                    except:
+                        pass
+
+                    # If no more '<' then grab the rest of string and abort
+                    if not nextNextIdx:
+                        keepGoing = False
+                        ret.append(remainder2)
+                        break
+
+                    # Otherwise, grab up to the char before and reiterate (to process potential url)
+                    ret.append( remainder2[ : nextNextIdx ] )
+                    remainingLine = remainder2 [ nextNextIdx : ]
+                else:
+                    # URL found in form of <http://www.example.com> - Strip to just http://www.example.com
+                    ret.append( urlMatch.groupdict()['url'] )
+
+                    # Move position to one past the '>' character
+                    remainingLine = remainder2[ remainder2.index('>') + 1 : ]
+
+            else:
+                # If no '<', grab the rest of the line and abort
+                ret.append( remainingLine )
+                keepGoing = False
+
+        return ''.join(ret)
+                
 
         
 # vim: set ts=4 sw=4 st=4 expandtab 
