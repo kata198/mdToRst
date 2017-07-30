@@ -218,6 +218,88 @@ class ConvertLineData(object):
 
         return line
 
+
+    @staticmethod
+    def _replaceSection(line, startStr, endStr, sectionRE, groupDictToReplacementFunc):
+        '''
+            _replaceSection - Common code to scan a line for a section that needs replacement,
+                                and to apply said replacement zero or more times.
+
+                @param line <str> - The line to process
+
+                @param startStr <str> - The character(s) which begins said section
+
+                @param endStr <str> - The character(s) which ends said section
+
+                @param sectionRE <_sre.SRE_Pattern aka re.compile result> - The regular expression
+                            to match a markdown section. Will be applied at each #startStr occurance
+
+                @param groupDictToReplacementFunc <callable [lambda/function] >(dict) - If #sectionRE matches,
+                            this function will be called with the group dict of the match, and should return
+                            the equivilant section in RST format
+
+                @return <str> - Updated line with all occurances of relevant section converted
+
+
+                NOTE: If the section is matched, the #startStr and #endStr will NOT be automatically copied
+                        into the result. If they need to be retained, #groupDictToReplacementFunc should return them
+        '''
+
+        if startStr not in line:
+            return line
+
+        remainingLine = line[:]
+        ret = []
+
+        # NOTE: This is a little ugly, but covers all kinda of corner cases I can imagine
+
+        keepGoing = True
+
+        while keepGoing is True:
+            # Check if '<' is still present
+            while startStr in remainingLine[:]:
+                nextIdx = remainingLine.index(startStr)
+                ret.append( remainingLine[ : nextIdx] )
+
+                remainder2 = remainingLine[ nextIdx : ]
+
+                matchObj = sectionRE.match( remainder2 )
+                if not matchObj:
+                    # Not a match, just #startStr
+
+                    # Check if we have another occurance of #startStr, and if not, grab the rest of string.
+                    #   otherwise, grab up to the next #startStr and reiterate
+                    nextNextIdx = None
+                    try:
+                        nextNextIdx = remainder2[len(startStr):].index(startStr)
+                    except:
+                        pass
+
+                    # If no more #startStr then grab the rest of string and abort
+                    if not nextNextIdx:
+                        keepGoing = False
+                        ret.append(remainder2)
+                        break
+
+                    # Otherwise, grab up to the char before and reiterate (to process an additional potential match)
+                    ret.append( remainder2[ : nextNextIdx ] )
+                    remainingLine = remainder2 [ nextNextIdx : ]
+                else:
+                    # We matched the section, so call the provided convert/replace func with the match groupdict
+                    newSection = groupDictToReplacementFunc( matchObj.groupdict() )
+
+                    ret.append(newSection)
+
+                    # Move position to one past the #endStr char
+                    remainingLine = remainder2[ remainder2.index(endStr) + len(endStr) : ]
+
+            else:
+                # If no #startStr, grab the rest of the line and abort
+                ret.append( remainingLine )
+                keepGoing = False
+
+        return ''.join(ret)
+                
     POINTED_BRACKET_URL_RE = re.compile('[<](?P<url>(http|https|ftp|smb|file)[:][/][/][^>]+)[>]')
 
     @classmethod
@@ -230,60 +312,11 @@ class ConvertLineData(object):
 
               @return <str> - The line with pointed brackets converted
         '''
+        return ConvertLineData._replaceSection(line, '<', '>', 
+                    cls.POINTED_BRACKET_URL_RE,
+                    lambda groupDict : groupDict['url']
+        )
 
-        if '<' not in line:
-            return line
-
-        remainingLine = line[:]
-        ret = []
-
-        # TODO: This is a little ugly, but covers all kinda of corner cases I can imagine
-
-        keepGoing = True
-
-        while keepGoing is True:
-            # Check if '<' is still present
-            while '<' in remainingLine[:]:
-                nextIdx = remainingLine.index('<')
-                ret.append( remainingLine[ : nextIdx] )
-
-                remainder2 = remainingLine[ nextIdx : ]
-
-                urlMatch = cls.POINTED_BRACKET_URL_RE.match( remainder2 )
-                if not urlMatch:
-                    # Not a url, just a < sign
-
-                    # Check if we have another < sign, and if not, grab the rest of string.
-                    #   otherwise, grab up to the next < and reiterate
-                    nextNextIdx = None
-                    try:
-                        nextNextIdx = remainder2[1:].index('<')
-                    except:
-                        pass
-
-                    # If no more '<' then grab the rest of string and abort
-                    if not nextNextIdx:
-                        keepGoing = False
-                        ret.append(remainder2)
-                        break
-
-                    # Otherwise, grab up to the char before and reiterate (to process potential url)
-                    ret.append( remainder2[ : nextNextIdx ] )
-                    remainingLine = remainder2 [ nextNextIdx : ]
-                else:
-                    # URL found in form of <http://www.example.com> - Strip to just http://www.example.com
-                    ret.append( urlMatch.groupdict()['url'] )
-
-                    # Move position to one past the '>' character
-                    remainingLine = remainder2[ remainder2.index('>') + 1 : ]
-
-            else:
-                # If no '<', grab the rest of the line and abort
-                ret.append( remainingLine )
-                keepGoing = False
-
-        return ''.join(ret)
-                
 
         
 # vim: set ts=4 sw=4 st=4 expandtab 
