@@ -222,12 +222,22 @@ class ConvertLineData(object):
 
     @classmethod
     def _convertPointedBrackets(cls, line):
+        '''
+            _convertPointedBrackets - Converts any urls within provided line
+                 like <http://www.example.com> to just http://www.example.com
+
+              @param line <str> - The line
+
+              @return <str> - The line with pointed brackets converted
+        '''
+
         if '<' not in line:
             return line
 
-        lastIdx = 0
         remainingLine = line[:]
         ret = []
+
+        # TODO: This is a little ugly, but covers all kinda of corner cases I can imagine
 
         keepGoing = True
 

@@ -22,8 +22,6 @@ import traceback
 import md_to_rst
 
 
-__author__ = 'Tim Savannah'
-
 def printUsage():
     sys.stderr.write('''Usage: mdToRst [filename]
   Converts a provided markdown file (.md) to restructed text (.rst)
@@ -40,6 +38,9 @@ Example Usage:
                                       #  output the converted document to stdout
 
 ''')
+
+def printVersion():
+    sys.stderr.write('mdToRst version %s by Tim Savannah\n\n' %(md_to_rst.__version__, ))
 
 
 def readDocumentFromStdin():
@@ -71,6 +72,10 @@ if __name__ == '__main__':
 
     if '--help' in args or '-h' in args:
         printUsage()
+        sys.exit(1)
+
+    if '--version' in args:
+        printVersion()
         sys.exit(1)
 
     if numArgs < 1:
