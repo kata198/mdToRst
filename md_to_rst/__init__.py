@@ -318,8 +318,7 @@ class ConvertLineData(object):
                     lambda groupDict : groupDict['url']
         )
 
-
-    LABELED_EXTERNAL_HYPERLINK_RE = re.compile("""[\[](?P<label>(([\\][\]])|[^\]])+)[\]][ \t]*[\(](?P<url>[^\)]+)""")
+    LABELED_EXTERNAL_HYPERLINK_RE = re.compile("""[\[](?P<label>(([\\][\]])|[^\]])+)[\]][ \t]*[\(][ \t]*(?P<url>[^( \t*")\)]+)[ \t]*(["].+["]){0,1}[\)]""")
 
     @classmethod
     def _convertLabeledExternalHyperlink(cls, line):
@@ -331,12 +330,14 @@ class ConvertLineData(object):
                 @param line <str> - The line
 
                 @return <str> - The line with external hyperlinks with labels converted
+
+                NOTE: If the markdown link has a title (hover text), the hover text is dropped as RST does not support it.
+                        Example:   [Cool Search Site](https://www.duckduckgo.com "Quack Quack")
         '''
         return ConvertLineData._replaceSection(line, '[', ')', 
                     cls.LABELED_EXTERNAL_HYPERLINK_RE,
                     lambda groupDict : "`%s <%s>`_" %(groupDict['label'].strip(), groupDict['url'].strip())
         )
-
 
 
     # oops... accidently did the labeled external hyperlinks from RST instead of frm markdown..
