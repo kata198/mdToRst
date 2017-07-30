@@ -318,5 +318,25 @@ class ConvertLineData(object):
         )
 
 
+    # oops... accidently did the labeled external hyperlinks from RST instead of frm markdown..
+    #      I'll save this, commented-out, for in the future if we do RST -> MD
+#    RST_LABELED_EXTERNAL_HYPERLINK_RE = re.compile("""[`](?P<label>(([\\][<])|[^<])+)[ \t]*[<](?P<url>[^(>`_)]+)([>][`][_])""")
+#
+#    @classmethod
+#    def _convertLabeledExternalHyperlinkRST(cls, line):
+#        '''
+#            _convertLabeledExternalHyperlink - Convert an external hyperlink with a label from MD form to RST form
+#
+#                    Example: `Python <http://www.python.org/>`_
+#
+#                @param line <str> - The line
+#
+#                @return <str> - The line with external hyperlinks with labels converted
+#        '''
+#        return ConvertLineData._replaceSection(line, "`", ">`_",
+#                    cls.LABELED_EXTERNAL_HYPERLINK_RE,
+#                    lambda groupDict : "[%s](%s)" %( groupDict['label'].strip(), groupDict['url'])
+#        )
+
         
 # vim: set ts=4 sw=4 st=4 expandtab 
