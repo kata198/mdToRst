@@ -1,0 +1,7 @@
+*~
+*.py[co]
+*.orig
+*.rej
+build/
+dist/
+__pycache__/
