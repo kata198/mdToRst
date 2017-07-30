@@ -33,141 +33,161 @@ def convertMarkdownToRst(contents):
     for i in range(numLines):
         line = lines[i]
 
-        convertedLines = _getConvertedLines(line, lines, i)
+        convertedLines = ConvertLines.getConvertedLines(line, lines, i)
 
         newLines += convertedLines
 
     return '\n'.join(newLines)
 
 
-
-
-
-def _getConvertedLines(line, lines, curIdx):
+class ConvertLines(object):
     '''
-        _getConvertedLines - Take a line of markdown, and return the converted RST lines
+        ConvertLines - Methods which take in a single line, and return a list of 0 or more equivalent lines
 
-            @param line <str> - A line from the markdown file
+          Public Methods:
 
-            @return list<str> - A list of converted lines
+            getConvertedLines - @see ConvertLines.getConvertedLines
+
     '''
-    if _isTabbedLine(line):
-        return _convertTabbedLine(line)
-    elif _isHashTitleLine(line):
-        return _convertHashTitle(line)
-    elif _isLineBreak(line, lines, curIdx):
-        return _addLineBreak(line)
-    else:
-        return [line]
- 
 
-def _isTabbedLine(line):
-    '''
-        _isTabbedLine - Check if line begins with a tab
-    '''
-    return line.startswith('\t')
+    @classmethod
+    def getConvertedLines(cls, line, lines, curIdx):
+        '''
+            getConvertedLines - Take a line of markdown, and return the converted RST lines
 
-def _convertTabbedLine(line):
-    '''
-        _convertTabbedLine - Convert an indented line (starts with tab) to RST.
+                @param line <str> - A line from the markdown file
 
-            Will prepend an empty line, to ensure breaking occurs as it did in the markdown.
-    '''
-    return ['', line]
+                @param lines list<str> - The list of all lines in the markdown file
+
+                @param curIdx <int> - The index of "line" in "lines"
 
 
-# HASH_TITLE_LINE_RE - Regular Expression object to match a line defining a "hash" title (the largest header in markdown).
-HASH_TITLE_LINE_RE = re.compile('^[  \\t]*[#][ \\t]*')
+                @return list<str> - A list of converted lines
+        '''
+        if cls._isTabbedLine(line):
+            return cls._convertTabbedLine(line)
+        elif cls._isHashTitleLine(line):
+            return cls._convertHashTitle(line)
+        elif cls._isLineBreak(line, lines, curIdx):
+            return cls._addLineBreak(line)
+        else:
+            return [line]
 
-def _isHashTitleLine(line):
-    '''
-        _isHashTitleLine - Check if line defines a "hash" title (the largest header in markdown).
 
-          This looks like:
+    @classmethod
+    def _isTabbedLine(cls, line):
+        '''
+            _isTabbedLine - Check if line begins with a tab
+        '''
+        return line.startswith('\t')
 
-            #MyProject
-    '''
-    return bool( HASH_TITLE_LINE_RE.match(line) )
+    @classmethod
+    def _convertTabbedLine(cls, line):
+        '''
+            _convertTabbedLine - Convert an indented line (starts with tab) to RST.
 
-def _convertHashTitle(line):
-    '''
-        _convertHashTitle - Convert a hashed title ( like #MyProject ) to an '=' underlined title.
+                Will prepend an empty line, to ensure breaking occurs as it did in the markdown.
+        '''
+        return ['', line]
 
-          This looks like:
 
-            #MyProject
+    # HASH_TITLE_LINE_RE - Regular Expression object to match a line defining a "hash" title (the largest header in markdown).
+    HASH_TITLE_LINE_RE = re.compile('^[  \\t]*[#][ \\t]*')
 
-          And will be converted to:
+    @classmethod
+    def _isHashTitleLine(cls, line):
+        '''
+            _isHashTitleLine - Check if line defines a "hash" title (the largest header in markdown).
 
-            MyProject
-            =========
-    '''
-    ret = []
+              This looks like:
 
-    unhashedLine = HASH_TITLE_LINE_RE.sub('', line)
-    unhashedLine = unhashedLine.rstrip()
+                #MyProject
+        '''
+        return bool( cls.HASH_TITLE_LINE_RE.match(line) )
 
-    ret.append( unhashedLine )
-    ret.append( '=' * len(unhashedLine) )
+    @classmethod
+    def _convertHashTitle(cls, line):
+        '''
+            _convertHashTitle - Convert a hashed title ( like #MyProject ) to an '=' underlined title.
 
-    return ret
+              This looks like:
 
-# LEADING_WHITESPACE_RE - Regular expression object capable of matching and extracting
-#   leading whitespace on a line. If it does not match, there is no leading whitespace.
-LEADING_WHITESPACE_RE = re.compile('(?P<leading_whitespace>^[ \\t]+)')
+                #MyProject
 
-def _getLeadingWhitespace(line):
-    '''
-        _getLeadingWhitespace - Extract the leading whitespace (spaces or tabs at start of line)
+              And will be converted to:
 
-          @param line <str> - The line
+                MyProject
+                =========
+        '''
+        ret = []
 
-          @return <str> - The leading whitespace on this line. If the line does not begin with whitespace,
-            empty string is returned.
-    '''
-    matchObj = LEADING_WHITESPACE_RE.match(line)
-    if not matchObj:
-        return ''
-    
-    return matchObj.groupdict()['leading_whitespace']
+        unhashedLine = cls.HASH_TITLE_LINE_RE.sub('', line)
+        unhashedLine = unhashedLine.rstrip()
 
-def _isLineBreak(line, lines, lineIdx):
-    '''
-        _isLineBreak - Check if the provided line would normally trigger a "break" (new line)
-          in markdown, but does not in RST.
+        ret.append( unhashedLine )
+        ret.append( '=' * len(unhashedLine) )
 
-          @param line <str> - The line to check
-          @param lines list<str> - List of all the lines
-          @param lineIdx <int> - The index of "line" within "lines"
+        return ret
 
-        If either line is blank (empty or only whitespace), a line break is NOT added.
+    # LEADING_WHITESPACE_RE - Regular expression object capable of matching and extracting
+    #   leading whitespace on a line. If it does not match, there is no leading whitespace.
+    LEADING_WHITESPACE_RE = re.compile('(?P<leading_whitespace>^[ \\t]+)')
 
-        Otherwise, if the given line and previous line share the same leading whitespace,
-          a line break is force-inserted such that MD and RST render the same
-    '''
-    if lineIdx == 0:
+    @classmethod
+    def _getLeadingWhitespace(cls, line):
+        '''
+            _getLeadingWhitespace - Extract the leading whitespace (spaces or tabs at start of line)
+
+              @param line <str> - The line
+
+              @return <str> - The leading whitespace on this line. If the line does not begin with whitespace,
+                empty string is returned.
+        '''
+        matchObj = cls.LEADING_WHITESPACE_RE.match(line)
+        if not matchObj:
+            return ''
+        
+        return matchObj.groupdict()['leading_whitespace']
+
+    @classmethod
+    def _isLineBreak(cls, line, lines, lineIdx):
+        '''
+            _isLineBreak - Check if the provided line would normally trigger a "break" (new line)
+              in markdown, but does not in RST.
+
+              @param line <str> - The line to check
+              @param lines list<str> - List of all the lines
+              @param lineIdx <int> - The index of "line" within "lines"
+
+            If either line is blank (empty or only whitespace), a line break is NOT added.
+
+            Otherwise, if the given line and previous line share the same leading whitespace,
+              a line break is force-inserted such that MD and RST render the same
+        '''
+        if lineIdx == 0:
+            return False
+
+        prevLine = lines[lineIdx - 1]
+        if not prevLine.strip() or not line.strip():
+            return False
+
+        if prevLine.startswith( ('-', '=') ) or  line.startswith( ('-', '=') ):
+            return False
+
+        curWhitespace = cls._getLeadingWhitespace(line)
+        prevWhitespace = cls._getLeadingWhitespace(prevLine)
+
+        if curWhitespace == prevWhitespace:
+            return True
+
         return False
 
-    prevLine = lines[lineIdx - 1]
-    if not prevLine.strip() or not line.strip():
-        return False
+    @classmethod
+    def _addLineBreak(cls, line):
+        '''
+            _addLineBreak - Adds a line break before "line"
+        '''
+        return ['', line]
 
-    if prevLine.startswith( ('-', '=') ) or  line.startswith( ('-', '=') ):
-        return False
-
-    curWhitespace = _getLeadingWhitespace(line)
-    prevWhitespace = _getLeadingWhitespace(prevLine)
-
-    if curWhitespace == prevWhitespace:
-        return True
-
-    return False
-
-def _addLineBreak(line):
-    '''
-        _addLineBreak - Adds a line break before "line"
-    '''
-    return ['', line]
-
-    
+        
 # vim: set ts=4 sw=4 st=4 expandtab 
