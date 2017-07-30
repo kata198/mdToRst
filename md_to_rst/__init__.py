@@ -17,6 +17,9 @@ import re
 
 __all__ = ('convertMarkdownToRst', )
 
+__version__ = '0.1.0'
+__version_tuple__ = (0, 1, 0)
+
 
 def convertMarkdownToRst(contents):
     '''

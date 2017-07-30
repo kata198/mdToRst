@@ -23,9 +23,6 @@ import md_to_rst
 
 
 __author__ = 'Tim Savannah'
-__version__ = '1.0.0'
-
-__version_tuple__ = ( 1, 0, 0 )
 
 def printUsage():
     sys.stderr.write('''Usage: mdToRst [filename]
