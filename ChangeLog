@@ -1,2 +1,17 @@
+0.2.0 - ??? ?? ????
+ * Several cleanups, performance improvements
+
+ * Split out line additions and inline replacements (the first for differences
+ in multi-line styling, the second for inline changes). The inline engine runs
+ through every rule on every line in sequence. The "line additions" engine
+ runs only on the first matching rule
+
+ * Support hyperlinks, the < http://www.example.com > variety, as well as the
+ named links like [ The Name ] < http://www.example.com >
+ 
+ * Support conversion of underscores for emphasis/bold in markdown to stars
+
+ * Unification of engine to make easily extensible and grouped
+
 0.1.0 - Jul 30 2017
  * Initial Release
