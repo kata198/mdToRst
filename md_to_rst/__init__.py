@@ -216,6 +216,7 @@ class ConvertLineData(object):
         '''
         line = cls._convertPointedBrackets(line)
         line = cls._convertLabeledExternalHyperlink(line)
+        line = cls._convertUnderscoreDecorations(line)
 
         return line
 
@@ -339,6 +340,23 @@ class ConvertLineData(object):
                     cls.LABELED_EXTERNAL_HYPERLINK_RE,
                     lambda groupDict : "`%s <%s>`_" %(groupDict['label'].strip(), groupDict['url'].strip())
         )
+
+    UNDERSCORE_BOLD_RE = re.compile('[_]{2}(?P<text>.+)[_]{2}')
+    UNDERSCORE_EM_RE   = re.compile('[_](?P<text>.+)[_]')
+
+    @classmethod
+    def _convertUnderscoreDecorations(cls, line):
+        line = ConvertLineData._replaceSection(line, '__', '__',
+                    cls.UNDERSCORE_BOLD_RE,
+                    lambda groupDict : "**%s**" %(groupDict['text'], )
+        )
+
+        line = ConvertLineData._replaceSection(line, '_', '_',
+                    cls.UNDERSCORE_EM_RE,
+                    lambda groupDict : "*%s*" %(groupDict['text'], )
+        )
+
+        return line
 
 
     # oops... accidently did the labeled external hyperlinks from RST instead of frm markdown..
