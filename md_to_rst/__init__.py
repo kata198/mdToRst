@@ -67,7 +67,7 @@ class ConvertLines(object):
                 @return list<str> - A list of converted lines
         '''
         if cls._isTabbedLine(line):
-            return cls._convertTabbedLine(line)
+            return cls._convertTabbedLine(line, lines, curIdx)
         elif cls._isHashTitleLine(line):
             return cls._convertHashTitle(line)
         elif cls._isLineBreak(line, lines, curIdx):
@@ -84,17 +84,27 @@ class ConvertLines(object):
         return line.startswith('\t')
 
     @classmethod
-    def _convertTabbedLine(cls, line):
+    def _convertTabbedLine(cls, line, lines, curIdx):
         '''
             _convertTabbedLine - Convert an indented line (starts with tab) to RST.
 
                 Will prepend an empty line, to ensure breaking occurs as it did in the markdown.
         '''
+        if curIdx == 0:
+            return [line]
+        if not line.strip():
+            return [line]
+
+        prevLine = lines[curIdx - 1]
+
+        if not prevLine.strip() or not line.strip():
+            return [line]
+
         return ['', line]
 
 
     # HASH_TITLE_LINE_RE - Regular Expression object to match a line defining a "hash" title (the largest header in markdown).
-    HASH_TITLE_LINE_RE = re.compile('^[  \\t]*[#][ \\t]*')
+    HASH_TITLE_LINE_RE = re.compile('^[#][ \\t]*')
 
     @classmethod
     def _isHashTitleLine(cls, line):
@@ -394,10 +404,7 @@ class ConvertLineData(object):
         )
 
 
-    #UNDERSCORE_BOLD_RE = re.compile('''(?<![\\\\])(?:[\\\\]{2})*_(?P<text>(?:(?<![\\\\])(?:[\\\\]{2})*[\\\\]_|[^_])+(?<![\\\\])(?:[\\\\]{2})*)_''')
     UNDERSCORE_BOLD_RE = re.compile('''(?<![\\\\])(?:[\\\\]{2})*__(?P<text>(?:(?<![\\\\])(?:[\\\\]{2})*[\\\\]_|[^_])+(?<![\\\\])(?:[\\\\]{2})*)__''')
-#    UNDERSCORE_BOLD_RE = re.compile('''(?<![\\\\])(?:[\\\\]{2})*__(?P<text>(?:(?<![\\\\])(?:[\\\\]{2})*[\\\\]_|[^_])+(?<![\\\\])(?:[\\\\]{2})*)''')
-
 
     UNDERSCORE_EM_RE = re.compile('''(?<![\\\\])(?:[\\\\]{2})*_(?P<text>(?:(?<![\\\\])(?:[\\\\]{2})*[\\\\]_|[^_])+(?<![\\\\])(?:[\\\\]{2})*)_''')
 
