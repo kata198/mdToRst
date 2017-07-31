@@ -214,9 +214,12 @@ class ConvertLineData(object):
 
                 @return <str> - The converted line
         '''
-        line = cls._convertPointedBrackets(line)
-        line = cls._convertLabeledExternalHyperlink(line)
-        line = cls._convertUnderscoreDecorations(line)
+
+        # For now, omit the following on preformatted text.
+        if not line.startswith('\t'):
+            line = cls._convertPointedBrackets(line)
+            line = cls._convertLabeledExternalHyperlink(line)
+            line = cls._convertUnderscoreDecorations(line)
 
         return line
 
