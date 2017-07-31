@@ -220,6 +220,17 @@ Tests using the [ GoodTests ] ( https://github.com/kata198/GoodTests ) framework
 
 Search engines like [ DuckDuckGo](		https://www.duckduckgo.com "Quack Quack") promise to not track you.
 
+This text is _italic_ and this text is __bold__ use it wisley.
+
+
+And this \_Is Nothing\_
+
+this also __I\_s\_ Nothing__
+
+this also \___Is Nothing__
+
+This is something __blah__
+
 The tests can be found in the "tests" directory of the project root.
 
 Use runTests.py in that directory to download GoodTests (if not already available/installed) and run the test suite against the local instance of subprocess2.
