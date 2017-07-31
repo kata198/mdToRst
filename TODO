@@ -1,5 +1,1 @@
-* Support converting hyperlinks that have a label, such as:
-   `GoodTests <https://github.com/kata198/GoodTests>`_
-
- 
 * Remove escaping in pre-formatted (indented) blocks. In markdown this works fine, but in a lot of RST implementations the escape slash '\' shows up
