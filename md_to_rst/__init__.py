@@ -292,6 +292,7 @@ class ConvertLineData(object):
                     ret.append(newSection)
 
                     # Move position to one past the #endStr char
+                    remainder2 = remainder2[len(startStr) : ]
                     remainingLine = remainder2[ remainder2.index(endStr) + len(endStr) : ]
 
             else:
