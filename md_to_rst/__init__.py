@@ -222,7 +222,7 @@ class ConvertLineData(object):
 
 
     @staticmethod
-    def _replaceSection(line, startStr, endStr, sectionRE, groupDictToReplacementFunc):
+    def _replaceSection(line, startStr, endStr, sectionRE, groupDictToReplacementFunc, omitEscapedStart=True):
         '''
             _replaceSection - Common code to scan a line for a section that needs replacement,
                                 and to apply said replacement zero or more times.
@@ -240,13 +240,16 @@ class ConvertLineData(object):
                             this function will be called with the group dict of the match, and should return
                             the equivilant section in RST format
 
+                @param omitEscapedStart <bool> default True, If True, will not count "startStr" that is preceded directly by an escape ( '\' )
+
+                   For example, if #startStr is "__" and the string contains "\__Hello__", if omitEscapedStart=True this will not match.
+
                 @return <str> - Updated line with all occurances of relevant section converted
 
 
                 NOTE: If the section is matched, the #startStr and #endStr will NOT be automatically copied
                         into the result. If they need to be retained, #groupDictToReplacementFunc should return them
         '''
-
         if startStr not in line:
             return line
 
@@ -255,51 +258,97 @@ class ConvertLineData(object):
 
         # NOTE: This is a little ugly, but covers all kinda of corner cases I can imagine
 
-        keepGoing = True
+        if omitEscapedStart:
+            
+            # For the following, we prefix the "haystack" with a dummy character.
+            #   This is because our RE search scans 1 character BEFORE the search string,
+            #    to omit escapes.
+            #
+            #  Prefixing the string both allows us to match on the first character in a line,
+            #    and causes the returned index (which will point to the char before) to line up
+            #    in the right place, by offsetting the whole line right 1.
+            startOrNone = lambda searchResult : searchResult is not None and searchResult.start() or None
 
-        while keepGoing is True:
-            # Check if '<' is still present
-            while startStr in remainingLine[:]:
-                nextIdx = remainingLine.index(startStr)
-                ret.append( remainingLine[ : nextIdx] )
+            startStrRE = re.compile('[^\\\\]' + re.escape(startStr) )
+            findNextIdxStart = lambda haystack : startOrNone( startStrRE.search( '^' + haystack ) )
 
-                remainder2 = remainingLine[ nextIdx : ]
+            endStrRE = re.compile('[^\\\\]' + re.escape(endStr) )
+            findNextIdxEnd = lambda haystack : startOrNone( endStrRE.search( '^' + haystack ) )
 
-                matchObj = sectionRE.match( remainder2 )
-                if not matchObj:
-                    # Not a match, just #startStr
+        else:
+            def findNextIdxStart(haystack):
+                try:
+                    return haystack.index(startStr)
+                except:
+                    return None
 
-                    # Check if we have another occurance of #startStr, and if not, grab the rest of string.
-                    #   otherwise, grab up to the next #startStr and reiterate
-                    nextNextIdx = None
-                    try:
-                        nextNextIdx = remainder2[len(startStr):].index(startStr)
-                    except:
-                        pass
+            def findNextIdxEnd(haystack):
+                try:
+                    return haystack.index(endStr)
+                except:
+                    return None
 
-                    # If no more #startStr then grab the rest of string and abort
-                    if not nextNextIdx:
-                        keepGoing = False
-                        ret.append(remainder2)
-                        break
+        # Since we cannot do an assignment in a conditional, like in C could do:
+        #
+        #           while ( (nextIdx = findNextIdxStart(remainingLine) ) != None ) )
+        #
+        #    to prevent double-searches, we have to use a "while True", 
+        #     and at the start perform the conditional, optionally breaking.
+        #    We will also break at the end of the loop.
 
-                    # Otherwise, grab up to the char before and reiterate (to process an additional potential match)
-                    ret.append( remainder2[ : nextNextIdx ] )
-                    remainingLine = remainder2 [ nextNextIdx : ]
-                else:
-                    # We matched the section, so call the provided convert/replace func with the match groupdict
-                    newSection = groupDictToReplacementFunc( matchObj.groupdict() )
 
-                    ret.append(newSection)
+        nextIdx = findNextIdxStart(remainingLine)
 
-                    # Move position to one past the #endStr char
-                    remainder2 = remainder2[len(startStr) : ]
-                    remainingLine = remainder2[ remainder2.index(endStr) + len(endStr) : ]
+        while nextIdx is not None:
+
+            # Append to result the current head to one character prior to the next occurance of #startStr
+            ret.append( remainingLine[ : nextIdx] )
+
+            # Put remainder of line starting at #startStr into #nextRemainingLine
+            nextRemainingLine = remainingLine[ nextIdx : ]
+
+            # See if the section beginning with #startStr is a match
+            matchObj = sectionRE.match( nextRemainingLine )
+
+            if not matchObj:
+                # Not a match, so move the head up to the next start, or end the loop.
+
+                remainingLine = nextRemainingLine
+
+
+                # Find next occurance of startStr, skipping over the length of startStr (since it is currently at head)
+                nextIdx = findNextIdxStart( nextRemainingLine[len(startStr) : ])
+
+                # If we have a match, extend the index past what we skipped
+                if nextIdx is not None:
+                    nextIdx += len(startStr)
+
+#                if nextIdx is None:
+#                    # No more occurances, break out of loop (which will append the remainder of data)
+#                    break
 
             else:
-                # If no #startStr, grab the rest of the line and abort
-                ret.append( remainingLine )
-                keepGoing = False
+                # We matched the section, so call the provided convert/replace func with the match groupdict
+                newSection = groupDictToReplacementFunc( matchObj.groupdict() )
+
+                # Append the converted section
+                ret.append(newSection)
+
+                # Move past the start so we can find the end (incase startStr and endStr are the same)
+                nextRemainingLine = nextRemainingLine[len(startStr) : ]
+
+                # Scan for the #endStr instead of using the span on the #matchObj, 
+                #   because the regex could match past the endStr if the pattern requires
+                pastEndIdx = findNextIdxEnd ( nextRemainingLine )
+
+                # remainingLine will now move past the end of the converted section (past the #endStr)
+                remainingLine = nextRemainingLine[ pastEndIdx + len(endStr) : ]
+
+                # Find next occurance of startStr
+                nextIdx = findNextIdxStart( remainingLine )
+
+        # No more matches, append rest of string
+        ret.append( remainingLine )
 
         return ''.join(ret)
                 
@@ -341,8 +390,14 @@ class ConvertLineData(object):
                     lambda groupDict : "`%s <%s>`_" %(groupDict['label'].strip(), groupDict['url'].strip())
         )
 
-    UNDERSCORE_BOLD_RE = re.compile('[_]{2}(?P<text>.+)[_]{2}')
-    UNDERSCORE_EM_RE   = re.compile('[_](?P<text>.+)[_]')
+
+    #UNDERSCORE_BOLD_RE = re.compile('''(?<![\\\\])(?:[\\\\]{2})*_(?P<text>(?:(?<![\\\\])(?:[\\\\]{2})*[\\\\]_|[^_])+(?<![\\\\])(?:[\\\\]{2})*)_''')
+    UNDERSCORE_BOLD_RE = re.compile('''(?<![\\\\])(?:[\\\\]{2})*__(?P<text>(?:(?<![\\\\])(?:[\\\\]{2})*[\\\\]_|[^_])+(?<![\\\\])(?:[\\\\]{2})*)__''')
+#    UNDERSCORE_BOLD_RE = re.compile('''(?<![\\\\])(?:[\\\\]{2})*__(?P<text>(?:(?<![\\\\])(?:[\\\\]{2})*[\\\\]_|[^_])+(?<![\\\\])(?:[\\\\]{2})*)''')
+
+
+    UNDERSCORE_EM_RE = re.compile('''(?<![\\\\])(?:[\\\\]{2})*_(?P<text>(?:(?<![\\\\])(?:[\\\\]{2})*[\\\\]_|[^_])+(?<![\\\\])(?:[\\\\]{2})*)_''')
+
 
     @classmethod
     def _convertUnderscoreDecorations(cls, line):
