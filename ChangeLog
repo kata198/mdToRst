@@ -1,4 +1,4 @@
-0.2.0 - ??? ?? ????
+0.2.0 - Jul 31 2017
  * Several cleanups, performance improvements
 
  * Split out line additions and inline replacements (the first for differences
