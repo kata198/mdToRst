@@ -23,6 +23,13 @@ __version__ = '0.2.0'
 __version_tuple__ = (0, 2, 0)
 
 
+# TODO: Should this be configurable other than 4?
+# TODO: Should we just replacing leading space with tabs based on this? 
+
+# NUM_SPACES_PER_TAB - The number of "space" characters which are considered the same as a tab
+NUM_SPACES_PER_TAB = 4
+
+
 # IS_DEVELOPER_DEBUG - Set to True to get developer debug messages
 IS_DEVELOPER_DEBUG = False
 
@@ -106,11 +113,13 @@ class ConvertLines(object):
 
                 @return list<str> - A list of converted lines
         '''
+
+
         if cls._isTabbedLine(line):
             return cls._convertTabbedLine(line, lines, curIdx)
         elif cls._isHashTitleLine(line):
             return cls._convertHashTitle(line)
-        elif cls._isLineBreak(line, lines, curIdx):
+        elif cls._isNeedingLineBreak(line, lines, curIdx):
             return cls._addLineBreak(line)
         else:
             return [line]
@@ -141,6 +150,21 @@ class ConvertLines(object):
             return [line]
 
         return ['', line]
+
+
+    UNORDERED_LIST_RE = re.compile('[\s]{0,%d[ ][ \\t]+' %( NUM_SPACES_PER_TAB, ))
+
+    @classmethod
+    def _isUnorderedListLine(cls, line):
+        '''
+            _isUnorderedListLine - Detect if line is to be rendered as an unordered list.
+
+              An unordered list begins with 0 to ( NUM_SPACES_PER_TAB - 1 ) spaces, followed by an astrick '*', followed by a (space or tab)
+
+        '''
+
+        # Check the format
+        return bool( cls.UNORDERED_LIST_RE.match(line) )
 
 
     # HASH_TITLE_LINE_RE - Regular Expression object to match a line defining a "hash" title (the largest header in markdown).
@@ -186,11 +210,13 @@ class ConvertLines(object):
     LEADING_WHITESPACE_RE = re.compile('(?P<leading_whitespace>^[ \\t]+)')
 
     @classmethod
-    def _getLeadingWhitespace(cls, line):
+    def _getLeadingWhitespace(cls, line, convertToTabs=False):
         '''
             _getLeadingWhitespace - Extract the leading whitespace (spaces or tabs at start of line)
 
               @param line <str> - The line
+
+              @param convertToTabs <bool, default False> - If True, all #NUM_SPACES_PER_TAB consecutive spaces will be converted to tabs.
 
               @return <str> - The leading whitespace on this line. If the line does not begin with whitespace,
                 empty string is returned.
@@ -199,12 +225,47 @@ class ConvertLines(object):
         if not matchObj:
             return ''
         
-        return matchObj.groupdict()['leading_whitespace']
+        ret = matchObj.groupdict()['leading_whitespace']
+        if convertToTabs:
+            ret = re.sub('[ ]{4}', '\t', ret)
+
+        return ret
 
     @classmethod
-    def _isLineBreak(cls, line, lines, lineIdx):
+    def _convertLeadingWhitespaceToIndentLevel(cls, leadingWhitespace):
         '''
-            _isLineBreak - Check if the provided line would normally trigger a "break" (new line)
+            _convertLeadingWhitespaceToIndentLevel - Count the number of "units" (indent levels) based on leading whitespace.
+
+                Each tab counts as 1, each #NUM_SPACES_PER_TAB consecutive count as one.
+
+                @param leadingWhitespace <str> - The leading whitespace on a line
+
+                @return <int> - Number of indent "units"
+        '''
+        # The spaces must be consecutive
+        return leadingWhitespace.count('\t') + leadingWhitespace.count(' ' * NUM_SPACES_PER_TAB)
+
+    @classmethod
+    def _getIndentLevel(cls, line):
+        '''
+            _getIndentLevel - Gets the indent level of this line
+
+              TODO: Tabspace other than 4? Should we just convert to tabs for simplicity sake?
+        '''
+
+        leadingWhitespace = cls._getLeadingWhitespace(line)
+
+        if not leadingWhitespace:
+            return 0
+
+        return cls._convertLeadingWhitespaceToIndentLevel(leadingWhitespace)
+
+
+
+    @classmethod
+    def _isNeedingLineBreak(cls, line, lines, lineIdx):
+        '''
+            _isNeedingLineBreak - Check if the provided line would normally trigger a "break" (new line)
               in markdown, but does not in RST.
 
               @param line <str> - The line to check
@@ -216,21 +277,51 @@ class ConvertLines(object):
             Otherwise, if the given line and previous line share the same leading whitespace,
               a line break is force-inserted such that MD and RST render the same
         '''
+        # If first line, don't worry about prior spacing
         if lineIdx == 0:
             return False
 
-        prevLine = lines[lineIdx - 1]
-        if not prevLine.strip() or not line.strip():
+        # If empty line, don't add extra spacing
+        if not line.strip():
             return False
 
+        # If previous line is empty, we treat line breaks the same
+        prevLine = lines[lineIdx - 1]
+        if not prevLine.strip():
+            return False
+
+        # If previous line is the underline of a title, or this line is the underline,
+        #   do not add spacing.
         if prevLine.startswith( ('-', '=') ) or  line.startswith( ('-', '=') ):
             return False
 
-        curWhitespace = cls._getLeadingWhitespace(line)
-        prevWhitespace = cls._getLeadingWhitespace(prevLine)
 
-        if curWhitespace == prevWhitespace:
+        curWhitespace = cls._getLeadingWhitespace(line, convertToTabs=True)
+        prevWhitespace = cls._getLeadingWhitespace(prevLine, convertToTabs=True)
+
+        curIndentLevel = cls._convertLeadingWhitespaceToIndentLevel(curWhitespace)
+        prevIndentLevel = cls._convertLeadingWhitespaceToIndentLevel(prevWhitespace)
+
+
+        # If an unordered list, there are special rules
+        if cls._isUnorderedListLine(line):
+
+            if curIndentLevel == 0 and prevIndentLevel == 0 and len(curWhitespace) >= len(prevWhitespace):
+                # If we are on the first indent level,
+                #  and have either the same number of prefixed space characters or less,
+                #  markdown forces a linebreak and RST does not.
+                return True
+
+            # Otherwise, indent rules are the same
+            return False
+
+        # Sub list rules seem to be the same, so far as I've tested..
+
+        if curIndentLevel < prevIndentLevel or ( curIndentLevel == prevIndentLevel and len(curWhitespace) >= len(prevWhitespace) ):
+            # In MD, if we've went down a full indent level, or if we are at the same level but have more leading spaces than prev line,
+            #   we add an implicit line break.
             return True
+
 
         return False
 
