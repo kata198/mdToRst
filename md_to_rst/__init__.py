@@ -255,6 +255,9 @@ class ConvertLines(object):
     # REPLACE_LEADING_WHITESPACE_RE - For replacing leading whitespace
     REPLACE_LEADING_WHITESPACE_RE = re.compile('^(?P<leading_whitespace>[ \\t]+)(?P<content>.*)$')
 
+
+    SPACES_EQUIV_TAB_RE = re.compile('[ ]{' + str(NUM_SPACES_PER_TAB) + '}')
+
     @classmethod
     def _replaceLeadingWhitespace(cls, line):
         '''
@@ -274,7 +277,7 @@ class ConvertLines(object):
         groupDict = matchObj.groupdict()
 
         leadingWhitespace = groupDict['leading_whitespace']
-        leadingWhitespace = re.sub('[ ]{4}', '\t', leadingWhitespace)
+        leadingWhitespace = cls.SPACES_EQUIV_TAB_RE.sub('\t', leadingWhitespace)
 
         return leadingWhitespace + groupDict['content']
 
@@ -380,6 +383,10 @@ class ConvertLineData(object):
             line = cls._convertPointedBrackets(line)
             line = cls._convertLabeledExternalHyperlink(line)
             line = cls._convertUnderscoreDecorations(line)
+        else:
+            # RST does not know what "preformatted" means and allows unescaped stuff..
+            #   So escape everything so MD == RST in representation
+            line = cls._convertEscapes(line)
 
         return line
 
@@ -573,6 +580,35 @@ class ConvertLineData(object):
 
         return line
 
+    BACKSLASH_RE = re.compile('[\\\\]')
+
+    STAR_RE = re.compile('[\*]')
+
+    DASH_RE = re.compile('[\-]')
+
+    UNDERSCORE_RE = re.compile('[_]')
+
+    PREFORMAT_ESCAPE_RES = ( 
+        (BACKSLASH_RE, '\\\\\\\\'), 
+        (STAR_RE, '\\*'),
+        (DASH_RE, '\\-'),
+        (UNDERSCORE_RE, '\\_'),
+    )
+
+    @classmethod
+    def _convertEscapes(cls, line):
+        '''
+            _convertEscapes - Escape all special characters, for use within preformatted text.
+
+                These characters do not require escaping in MD (which actually assumes the text is preformatted!),
+                  but they do in RST.
+
+        '''
+        for matchRE, replaceWith in cls.PREFORMAT_ESCAPE_RES:
+            line = matchRE.sub(replaceWith, line)
+
+        return line
+        
 
     # oops... accidently did the labeled external hyperlinks from RST instead of frm markdown..
     #      I'll save this, commented-out, for in the future if we do RST -> MD
