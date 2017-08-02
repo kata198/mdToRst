@@ -14,11 +14,51 @@
 '''
 
 import re
+import sys
+import traceback
 
 __all__ = ('convertMarkdownToRst', 'ConvertLines', 'ConvertLineData' )
 
 __version__ = '0.2.0'
 __version_tuple__ = (0, 2, 0)
+
+
+# IS_DEVELOPER_DEBUG - Set to True to get developer debug messages
+IS_DEVELOPER_DEBUG = False
+
+if IS_DEVELOPER_DEBUG is False:
+    def debugmsg(msg, msgTupleLambda=None):
+        '''
+            debugmsg - shunt
+        '''
+        pass
+else:
+    def debugmsg(msg, msgTupleLambda=None):
+        '''
+            debugmsg - If #IS_DEVELOPER_DEBUG is changed to True (in the code, changing it after import has no affect ) this will print a debug message
+
+                        to stderr prefixed with "DEBUG: " and suffixed with a newline.
+
+                       Don't create your message like:
+
+                           debugmsg( "Order(id=%s) has %d pepperoni pizzas" %( myOrder.id, len( [ topping for pizza in getPizzas() for topping in pizza.toppings() if 'pepperoni' in topping ] ) ) )
+
+                       Which would evaluate that comprehension whether or not debug mode is on,
+
+                         Instead, use a lambda to return that same tuple, so that code is only evaluated in the #debugmsg function calls your lambda:
+
+                           debugmsg( "Order(id=%s) has %d pepperoni pizzas", lambda : ( myOrder.id, len( [ topping for pizza in getPizzas() for topping in pizza.toppings() if 'pepperoni' in topping ] ) ) )
+        '''
+
+        if issubclass(msgTupleLambda.__class__, (tuple, list)):
+            sys.stderr.write('''WARNING: debugmsg called with a tuple/list for msgTupleLambda.\n\tShould be a lambda that returns the tuple, so when IS_DEVELOPER_DEBUG=False it is not evaluated. \n\n''' + ''.join(traceback.format_stack()[:-1]) + "\n\n" )
+
+            msgTuple = msgTupleLambda
+        else:
+            msgTuple = msgTupleLambda()
+
+        sys.stderr.write('DEBUG: %s\n' % msgTuple )
+
 
 
 def convertMarkdownToRst(contents):
