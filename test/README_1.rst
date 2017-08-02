@@ -27,7 +27,7 @@ Usage
 
 		Converts a provided markdown file (.md) to restructed text (.rst)
 
-	If "filename" is provided as "--", the markdown will be read from stdin.
+	If "filename" is provided as "\-\-", the markdown will be read from stdin.
 
 	Example Usage:
 

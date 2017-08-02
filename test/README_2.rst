@@ -32,7 +32,7 @@ This method adds the ability to specify a timeout when waiting for a subprocess 
 This method allows specifying a timeout, like waitUpTo, but will also handle terminating or killing the application if it exceeds the timeout (see full documentation for details and parameters)
 
 
-	def waitOrTerminate(self, timeoutSeconds, pollInterval=DEFAULT_POLL_INTERVAL, terminateToKillSeconds=SUBPROCESS2_DEFAULT_TERMINATE_TO_KILL_SECONDS):
+	def waitOrTerminate(self, timeoutSeconds, pollInterval=DEFAULT\_POLL\_INTERVAL, terminateToKillSeconds=SUBPROCESS2\_DEFAULT\_TERMINATE\_TO\_KILL\_SECONDS):
 
 
 Background Task Management
@@ -66,17 +66,17 @@ http://pythonhosted.org/python-subprocess2/subprocess2.BackgroundTask.html
 
 		'''
 
-			runInBackground - Create a background thread which will manage this process, automatically read from streams, and perform any cleanups
+			runInBackground \- Create a background thread which will manage this process, automatically read from streams, and perform any cleanups
 
 			The object returned is a "BackgroundTaskInfo" object, and represents the state of the process. It is updated automatically as the program runs,
 
 			and if stdout or stderr are streams, they are automatically read from and populated into this object.
 
-			@see BackgroundTaskInfo for more info or http://pythonhosted.org/python-subprocess2/subprocess2.BackgroundTask.html
+			@see BackgroundTaskInfo for more info or http://pythonhosted.org/python\-subprocess2/subprocess2.BackgroundTask.html
 
-			@param pollInterval - Amount of idle time between polling
+			@param pollInterval \- Amount of idle time between polling
 
-			@param encoding - Default False. If provided, data will be decoded using the value of this field as the codec name (e.x. "utf-8"). Otherwise, data will be stored as bytes.
+			@param encoding \- Default False. If provided, data will be decoded using the value of this field as the codec name (e.x. "utf\-8"). Otherwise, data will be stored as bytes.
 
 		'''
 
@@ -87,7 +87,7 @@ Object returned is of type BackgroundTaskInfo ( http://pythonhosted.org/python-s
 
 		'''
 
-			BackgroundTaskInfo - Represents a task that was sent to run in the background. Will be updated as the status of that process changes.
+			BackgroundTaskInfo \- Represents a task that was sent to run in the background. Will be updated as the status of that process changes.
 
 				Can be used like an object or a dictionary.
 
@@ -95,15 +95,15 @@ Object returned is of type BackgroundTaskInfo ( http://pythonhosted.org/python-s
 
 			FIELDS:
 
-				stdoutData - Bytes read automatically from stdout, if stdout was a pipe, or from stderr if stderr was set to subprocess.STDOUT
+				stdoutData \- Bytes read automatically from stdout, if stdout was a pipe, or from stderr if stderr was set to subprocess.STDOUT
 
-				stderrData - Bytes read automatically from stderr, if different pipe than stdout.
+				stderrData \- Bytes read automatically from stderr, if different pipe than stdout.
 
-				isFinished - False while the background application is running, True when it completes.
+				isFinished \- False while the background application is running, True when it completes.
 
-				returnCode - None if the program has not completed, otherwise the numeric return code.
+				returnCode \- None if the program has not completed, otherwise the numeric return code.
 
-				timeElapsed - Float of how many seconds have elapsed since the last update (updates happen very close to the "pollInterval" provided when calling runInBackground)
+				timeElapsed \- Float of how many seconds have elapsed since the last update (updates happen very close to the "pollInterval" provided when calling runInBackground)
 
 		'''
 
@@ -138,7 +138,7 @@ If you decide later you wait to block the current context until one of those pip
 
 	# ....do some hard work here...
 
-	sys.stdout.write('Current output: ' + pipe1Info.stdoutData.decode('utf-8'))
+	sys.stdout.write('Current output: ' + pipe1Info.stdoutData.decode('utf\-8'))
 
 	# .... more hard work...
 
@@ -156,7 +156,7 @@ Get list of all executable files in current directory (and subdirs) as an array:
 
 	import subprocess2
 
-	executableFiles = subprocess2.Simple.runGetOutput('find . -type f -executable').split('\n')[:-1] # All but last entry because of final newline in output
+	executableFiles = subprocess2.Simple.runGetOutput('find . \-type f \-executable').split('\\n')[:\-1] # All but last entry because of final newline in output
 
 
 Functions include:
@@ -167,7 +167,7 @@ Simpliest method -- pass a command, get output on return.
 
 	runGetOutput(cmd, raiseOnFailure=False, encoding=sys.getdefaultencoding())
 
-		runGetOutput - Simply runs a command and returns the output as a string. Use #runGetResults if you need something more complex.
+		runGetOutput \- Simply runs a command and returns the output as a string. Use #runGetResults if you need something more complex.
 
 
 *Example:*
@@ -176,11 +176,11 @@ Simpliest method -- pass a command, get output on return.
 
 	try:
 
-		executableFiles = subprocess2.Simple.runGetOutput('find . -type f -executable', raiseOnFailure=True).split('\n')[:-1]
+		executableFiles = subprocess2.Simple.runGetOutput('find . \-type f \-executable', raiseOnFailure=True).split('\\n')[:\-1]
 
 	except subprocess2.Simple.SimpleCommandFailure as e:
 
-		sys.stderr.write('Command failed [return=%d]: stderr = %s\n' %(e.returnCode, e.stderr) )
+		sys.stderr.write('Command failed [return=%d]: stderr = %s\\n' %(e.returnCode, e.stderr) )
 
 
 **runGetResults**
@@ -189,22 +189,22 @@ More complicated, returns results in a dict. See docstring for all options.
 
 	runGetResults(cmd, stdout=True, stderr=True, encoding=sys.getdefaultencoding())
 
-		runGetResults - Simple method to run a command and return the results of the execution as a dict.
+		runGetResults \- Simple method to run a command and return the results of the execution as a dict.
 
 
 *Example:*
 
 	import subprocess2
 
-	results = subprocess2.Simple.runGetResults('find . -type f -executable')
+	results = subprocess2.Simple.runGetResults('find . \-type f \-executable')
 
 	if results['returnCode'] != 0:
 
-		sys.stderr.write('Command failed [return=%d]: stderr = %s\n' %(results['returnCode'], results['stderr']))
+		sys.stderr.write('Command failed [return=%d]: stderr = %s\\n' %(results['returnCode'], results['stderr']))
 
 	else:
 
-		executableFiles = results['stdout'].split('\n')[:-1]
+		executableFiles = results['stdout'].split('\\n')[:\-1]
 
 
 **"Simple" PyDoc**
