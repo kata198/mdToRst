@@ -23,9 +23,6 @@ __version__ = '0.2.0'
 __version_tuple__ = (0, 2, 0)
 
 
-# TODO: Should this be configurable other than 4?
-# TODO: Should we just replacing leading space with tabs based on this? 
-
 # NUM_SPACES_PER_TAB - The number of "space" characters which are considered the same as a tab
 NUM_SPACES_PER_TAB = 4
 
@@ -113,6 +110,8 @@ class ConvertLines(object):
 
                 @return list<str> - A list of converted lines
         '''
+
+        line = cls._replaceLeadingWhitespace(line)
 
 
         if cls._isTabbedLine(line):
@@ -207,16 +206,14 @@ class ConvertLines(object):
 
     # LEADING_WHITESPACE_RE - Regular expression object capable of matching and extracting
     #   leading whitespace on a line. If it does not match, there is no leading whitespace.
-    LEADING_WHITESPACE_RE = re.compile('(?P<leading_whitespace>^[ \\t]+)')
+    LEADING_WHITESPACE_RE = re.compile('^(?P<leading_whitespace>[ \\t]+)')
 
     @classmethod
-    def _getLeadingWhitespace(cls, line, convertToTabs=False):
+    def _getLeadingWhitespace(cls, line):
         '''
             _getLeadingWhitespace - Extract the leading whitespace (spaces or tabs at start of line)
 
               @param line <str> - The line
-
-              @param convertToTabs <bool, default False> - If True, all #NUM_SPACES_PER_TAB consecutive spaces will be converted to tabs.
 
               @return <str> - The leading whitespace on this line. If the line does not begin with whitespace,
                 empty string is returned.
@@ -225,11 +222,7 @@ class ConvertLines(object):
         if not matchObj:
             return ''
         
-        ret = matchObj.groupdict()['leading_whitespace']
-        if convertToTabs:
-            ret = re.sub('[ ]{4}', '\t', ret)
-
-        return ret
+        return matchObj.groupdict()['leading_whitespace']
 
     @classmethod
     def _convertLeadingWhitespaceToIndentLevel(cls, leadingWhitespace):
@@ -250,7 +243,6 @@ class ConvertLines(object):
         '''
             _getIndentLevel - Gets the indent level of this line
 
-              TODO: Tabspace other than 4? Should we just convert to tabs for simplicity sake?
         '''
 
         leadingWhitespace = cls._getLeadingWhitespace(line)
@@ -260,7 +252,31 @@ class ConvertLines(object):
 
         return cls._convertLeadingWhitespaceToIndentLevel(leadingWhitespace)
 
+    # REPLACE_LEADING_WHITESPACE_RE - For replacing leading whitespace
+    REPLACE_LEADING_WHITESPACE_RE = re.compile('^(?P<leading_whitespace>[ \\t]+)(?P<content>.*)$')
 
+    @classmethod
+    def _replaceLeadingWhitespace(cls, line):
+        '''
+            _replaceLeadingWhitespace - Replace leading whitespace which could be a combination of tabs and spaces,
+                
+                into the indent level * tabs followed by any additional spaces. This greatly simplifies logic and patterns
+
+                and should be done first.
+
+        '''
+        matchObj = cls.REPLACE_LEADING_WHITESPACE_RE.match(line)
+        if not matchObj:
+            # Minor optimization, we use a "+" instead of "*" because if we don't match at least one whitespace char,
+            #   we don't need to process the rest of this function. just return as-is
+            return line
+
+        groupDict = matchObj.groupdict()
+
+        leadingWhitespace = groupDict['leading_whitespace']
+        leadingWhitespace = re.sub('[ ]{4}', '\t', leadingWhitespace)
+
+        return leadingWhitespace + groupDict['content']
 
     @classmethod
     def _isNeedingLineBreak(cls, line, lines, lineIdx):
@@ -296,8 +312,8 @@ class ConvertLines(object):
             return False
 
 
-        curWhitespace = cls._getLeadingWhitespace(line, convertToTabs=True)
-        prevWhitespace = cls._getLeadingWhitespace(prevLine, convertToTabs=True)
+        curWhitespace = cls._getLeadingWhitespace(line)
+        prevWhitespace = cls._getLeadingWhitespace(prevLine)
 
         curIndentLevel = cls._convertLeadingWhitespaceToIndentLevel(curWhitespace)
         prevIndentLevel = cls._convertLeadingWhitespaceToIndentLevel(prevWhitespace)
@@ -355,6 +371,9 @@ class ConvertLineData(object):
 
                 @return <str> - The converted line
         '''
+
+        # TODO: Maybe refactor so we aren't calling across worker classes here?
+        line = ConvertLines._replaceLeadingWhitespace(line)
 
         # For now, omit the following on preformatted text.
         if not line.startswith('\t'):
