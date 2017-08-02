@@ -23,22 +23,17 @@ The goal here is to simplify things to where you only have to write and maintain
 Usage
 =====
 
-
 	Usage: mdToRst [filename]
 
 		Converts a provided markdown file (.md) to restructed text (.rst)
 
-
-	If "filename" is provided as "--", the markdown will be read from stdin.
-
+	If "filename" is provided as "\-\-", the markdown will be read from stdin.
 
 	Example Usage:
-
 
 		mdToRst README.md | tee README.rst  # Read in README.md, convert to rst, 
 
 											#  and output both to stdout and "README.rst"
-
 
 
 		cat README.md | mdToRst         # Pipe in the contents of "README.md", and
