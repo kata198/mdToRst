@@ -1,3 +1,17 @@
+1.0.0
+
+ * Escape special characters within preformatted text. Markdown does not
+ interpret within preformatted text, but RST tries to... This ensures
+ equivilant output
+
+ * Replace leading sets of 4 spaces with tabs in RST output, to simplify a lot
+ of the code and keep display the same
+
+ * Some additional logic on differeing whitespace and consecutive lines, cases
+ where MD inserts a linebreak but RST needs an explicit, and cases where they
+ are the same.
+
+
 0.2.0 - Jul 31 2017
  * Several cleanups, performance improvements
 
