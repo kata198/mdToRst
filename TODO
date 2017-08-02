@@ -1,1 +1,0 @@
-* Remove escaping in pre-formatted (indented) blocks. In markdown this works fine, but in a lot of RST implementations the escape slash '\' shows up
