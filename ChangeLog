@@ -1,4 +1,7 @@
-1.0.0
+1.0.0 - Aug 1 2017
+
+Version 1.0.0 - Works pretty well perfect across all my projects.
+
 
  * Escape special characters within preformatted text. Markdown does not
  interpret within preformatted text, but RST tries to... This ensures
