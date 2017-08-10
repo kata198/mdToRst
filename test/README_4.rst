@@ -136,5 +136,5 @@ Works on windows, linux/unix, cygwin, mac
 
 ChangeLog can be found at https://raw.githubusercontent.com/kata198/func_timeout/master/ChangeLog 
 
-Pydoc can be found at: http://htmlpreview.github.io/?https://github.com/kata198/func*timeout/blob/master/doc/func*timeout.html?vers=1
+Pydoc can be found at: http://htmlpreview.github.io/?https://github.com/kata198/func_timeout/blob/master/doc/func_timeout.html?vers=1
 
