@@ -221,7 +221,7 @@ class ConvertLines(object):
         matchObj = cls.LEADING_WHITESPACE_RE.match(line)
         if not matchObj:
             return ''
-        
+
         return matchObj.groupdict()['leading_whitespace']
 
     @classmethod
@@ -262,7 +262,7 @@ class ConvertLines(object):
     def _replaceLeadingWhitespace(cls, line):
         '''
             _replaceLeadingWhitespace - Replace leading whitespace which could be a combination of tabs and spaces,
-                
+
                 into the indent level * tabs followed by any additional spaces. This greatly simplifies logic and patterns
 
                 and should be done first.
@@ -392,7 +392,7 @@ class ConvertLineData(object):
 
 
     @staticmethod
-    def _replaceSection(line, startStr, endStr, sectionRE, groupDictToReplacementFunc, omitEscapedStart=True):
+    def _replaceSection(line, startStr, endStr, sectionRE, groupDictToReplacementFunc, omitEscapedStart=True, skipRanges=None):
         '''
             _replaceSection - Common code to scan a line for a section that needs replacement,
                                 and to apply said replacement zero or more times.
@@ -414,6 +414,9 @@ class ConvertLineData(object):
 
                    For example, if #startStr is "__" and the string contains "\__Hello__", if omitEscapedStart=True this will not match.
 
+                @param skipRanges None or list< tuple(int, int) > - If provided, defines a set of (start, end) pairs which will be omitted from processing.
+
+
                 @return <str> - Updated line with all occurances of relevant section converted
 
 
@@ -423,13 +426,39 @@ class ConvertLineData(object):
         if startStr not in line:
             return line
 
+
+        if not skipRanges:
+            isMatchValidRange = lambda matchStart, matchEnd : True
+
+            hasSkipRanges = False
+        else:
+            def isMatchValidRange(matchStart, matchEnd):
+
+                for skipRange in skipRanges:
+
+                    (skipStart, skipEnd) = skipRange
+
+                    # Check if start point is within the range being skipped
+                    if matchStart >= skipStart and matchStart <= skipEnd:
+                        return False
+
+                    # Check if end point is within skip range
+                    if matchEnd >= skipStart and matchEnd <= skipEnd:
+                        return False
+
+                # Not in any skip ranges, move-on ahead!
+                return True
+
+            # Cheaper than re-evalling on a list every time
+            hasSkipRanges = True
+
         remainingLine = line[:]
         ret = []
 
         # NOTE: This is a little ugly, but covers all kinda of corner cases I can imagine
 
         if omitEscapedStart:
-            
+
             # For the following, we prefix the "haystack" with a dummy character.
             #   This is because our RE search scans 1 character BEFORE the search string,
             #    to omit escapes.
@@ -469,7 +498,16 @@ class ConvertLineData(object):
 
         nextIdx = findNextIdxStart(remainingLine)
 
+        # fullIdx - The full index from the start of line
+        fullIdx = 0
+
         while nextIdx is not None:
+
+            fullIdx += nextIdx
+
+            # XXX: DEBUG LINE!
+            #if line[fullIdx] != remainingLine[nextIdx]:
+            #    raise Exception("Math is off [ %d ]!\n\n%s\n%s^\n\n%s" %( fullIdx, line, ' ' * fullIdx, remainingLine))
 
             # Append to result the current head to one character prior to the next occurance of #startStr
             ret.append( remainingLine[ : nextIdx] )
@@ -480,7 +518,16 @@ class ConvertLineData(object):
             # See if the section beginning with #startStr is a match
             matchObj = sectionRE.match( nextRemainingLine )
 
+            if hasSkipRanges and matchObj:
+                # If we have ranges to skip, check if our match falls within those ranges
+                matchedSpan = [idx + fullIdx for idx in matchObj.span()]
+
+                if not isMatchValidRange( *matchedSpan ):
+                    # And if it did, invalidate our match.
+                    matchObj = None
+
             if not matchObj:
+
                 # Not a match, so move the head up to the next start, or end the loop.
 
                 remainingLine = nextRemainingLine
@@ -498,6 +545,7 @@ class ConvertLineData(object):
 #                    break
 
             else:
+
                 # We matched the section, so call the provided convert/replace func with the match groupdict
                 newSection = groupDictToReplacementFunc( matchObj.groupdict() )
 
@@ -521,8 +569,38 @@ class ConvertLineData(object):
         ret.append( remainingLine )
 
         return ''.join(ret)
-                
-    POINTED_BRACKET_URL_RE = re.compile('[<](?P<url>(http|https|ftp|smb|file)[:][/][/][^>]+)[>]')
+
+
+    URL_RANGES_RE = re.compile('(?P<url>(?:https|http|ftp|smb|file)[:][/][/][^\s]+)')
+
+    @classmethod
+    def _findUrlRanges(cls, line):
+        '''
+            _findUrlRanges - Identifies the ranges within a line which define a url,
+
+                so they can be ommitted from some formatting operations.
+
+              @param line <str> - The line
+
+              @return list< tuple(int, int) > - A list of (start, end) indexes matching urls found in line
+        '''
+
+        ret = []
+
+        scanner = cls.URL_RANGES_RE.scanner(line)
+
+        while True:
+
+            nextUrlMatch = scanner.search()
+            if not nextUrlMatch:
+                break
+
+            ret.append( tuple(nextUrlMatch.span()) )
+
+        return ret
+
+
+    POINTED_BRACKET_URL_RE = re.compile('[<](?P<url>(https|http|ftp|smb|file)[:][/][/][^>]+)[>]')
 
     @classmethod
     def _convertPointedBrackets(cls, line):
@@ -568,14 +646,24 @@ class ConvertLineData(object):
 
     @classmethod
     def _convertUnderscoreDecorations(cls, line):
+
+        urlMatches = cls._findUrlRanges(line)
+
         line = ConvertLineData._replaceSection(line, '__', '__',
                     cls.UNDERSCORE_BOLD_RE,
-                    lambda groupDict : "**%s**" %(groupDict['text'], )
+                    lambda groupDict : "**%s**" %(groupDict['text'], ),
+                    skipRanges = urlMatches
         )
+
+        if urlMatches:
+            # If there were no urls before, there will still be none.
+            #   Otherwise, their indexes may have moved. So recalc
+            urlMatches = cls._findUrlRanges(line)
 
         line = ConvertLineData._replaceSection(line, '_', '_',
                     cls.UNDERSCORE_EM_RE,
-                    lambda groupDict : "*%s*" %(groupDict['text'], )
+                    lambda groupDict : "*%s*" %(groupDict['text'], ),
+                    skipRanges = urlMatches
         )
 
         return line
@@ -608,7 +696,7 @@ class ConvertLineData(object):
             line = matchRE.sub(replaceWith, line)
 
         return line
-        
+
 
     # oops... accidently did the labeled external hyperlinks from RST instead of frm markdown..
     #      I'll save this, commented-out, for in the future if we do RST -> MD
@@ -630,5 +718,5 @@ class ConvertLineData(object):
 #                    lambda groupDict : "[%s](%s)" %( groupDict['label'].strip(), groupDict['url'])
 #        )
 
-        
-# vim: set ts=4 sw=4 st=4 expandtab 
+
+# vim: set ts=4 sw=4 st=4 expandtab :
