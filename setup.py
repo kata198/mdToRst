@@ -67,7 +67,7 @@ if __name__ == '__main__':
                           'Topic :: Software Development :: Documentation',
                           'Topic :: Text Processing',
                           'Topic :: Text Processing :: Markup',
-                          'Topic :: Utilities'
+                          'Topic :: Utilities',
                           'Topic :: Software Development :: Libraries :: Python Modules',
             ]
     )
