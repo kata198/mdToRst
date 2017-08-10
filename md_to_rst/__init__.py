@@ -19,8 +19,8 @@ import traceback
 
 __all__ = ('convertMarkdownToRst', 'ConvertLines', 'ConvertLineData' )
 
-__version__ = '1.0.0'
-__version_tuple__ = (1, 0, 0)
+__version__ = '1.1.0'
+__version_tuple__ = (1, 1, 0)
 
 
 # NUM_SPACES_PER_TAB - The number of "space" characters which are considered the same as a tab

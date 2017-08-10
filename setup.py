@@ -39,7 +39,7 @@ if __name__ == '__main__':
         long_description = summary
 
     setup(name='mdToRst',
-            version='0.1.0',
+            version='1.1.0',
             packages=['md_to_rst'],
             scripts=['mdToRst'],
             author='Tim Savannah',

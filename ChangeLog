@@ -1,3 +1,8 @@
+1.1.0 - Aug 10 2017
+
+- Do not do underscore (emphasis, bold) replacement within a url
+- Fix version in setup.py
+
 1.0.0 - Aug 1 2017
 
 Version 1.0.0 - Works pretty well perfect across all my projects.
